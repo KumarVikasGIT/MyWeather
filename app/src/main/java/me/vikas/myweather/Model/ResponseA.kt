@@ -43,8 +43,8 @@ data class Sys(
 )
 
 data class Wind(
-	val deg: Int? = null,
-	val speed: Any? = null,
+	val deg: Double? = null,
+	val speed: Double? = null,
 	val gust: Any? = null
 )
 

@@ -5,18 +5,15 @@ import me.vikas.myweather.Util.Const
 import me.vikas.myweather.Web.WebService
 import retrofit2.Call
 
-class DataRepo(val webService:WebService) {
+class DataRepo(val webService: WebService) {
 
-//    fun currentWeatherOf(key:String,city:String ): Call<CityWeather?> {
-//       return webService.currentWeather(key,city)
-//    }
+    fun currentWeatherOfCity(city: String): Call<ResponseA?> {
+        return webService.currentWeatherOf(city, unit = Const.METRIC, key = Const.KEY)
+    }
 
-//    fun getCurrentWeather(latitude: String, longitude:String):Call<CurrentWeather>{
-//        return webService.currentForeCast(latitude,longitude,Const._2mTemprature)
-//    }
 
-    fun currentWeatherOf(latitude: String, longitude:String): Call<ResponseA?> {
-        return webService.currentWeather(latitude,longitude, unit="metric", key ="01c6156d82bbf5a9b4ee9d69319fe0c2")
+    fun currentWeatherOf(latitude: String, longitude: String): Call<ResponseA?> {
+        return webService.currentWeather(latitude, longitude, unit = Const.METRIC, key = Const.KEY)
     }
 
 }

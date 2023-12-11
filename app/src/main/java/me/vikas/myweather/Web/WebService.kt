@@ -7,14 +7,10 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WebService {
-//    @GET("current.json")
-//    fun currentWeatherOf(@Query("key") key:String,
-//                         @Query("q") location:String): Call<CityWeather?>
-
-//    @GET("forecast")
-//    fun currentForeCast(@Query("latitude") lan:String,
-//                        @Query("longitude") lon:String,
-//                        @Query("current") current: String):Call<CurrentWeather>
+    @GET("weather")
+    fun currentWeatherOf(@Query("q") location:String,
+                         @Query("units") unit: String,
+                         @Query("appid") key: String): Call<ResponseA?>
 
     @GET("weather")
     fun currentWeather(
