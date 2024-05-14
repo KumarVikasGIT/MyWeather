@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.Window
@@ -23,6 +25,8 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import me.vikas.myweather.R
+import me.vikas.myweather.Util.CheckNetwork
+import me.vikas.myweather.Util.showAlertDialogue
 
 class SplashActivity : AppCompatActivity() {
 
@@ -39,9 +43,26 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_splash)
-        data = Bundle()
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        data = Bundle()
+
+        if(!CheckNetwork().isInternetAvailable(this)){
+            showAlertDialogue(this, "Network Error", "Please make sure you are connected to internet.",
+                onRetry = { recreate() }){
+                finish()
+            }
+        }
+
+        if (checkLocationPermission()) {
+            Toast.makeText(this, "Loading...", Toast.LENGTH_SHORT).show()
+            requestLocationUpdates()
+            getLastLocation()
+        } else {
+            requestLocationPermission()
+            return
+        }
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
@@ -53,13 +74,6 @@ class SplashActivity : AppCompatActivity() {
                     data.putString("longitude", longitude.toString())
                 }
             }
-        }
-
-        if (checkLocationPermission()) {
-            requestLocationUpdates()
-            getLastLocation()
-        } else {
-            requestLocationPermission()
         }
 
         Handler(mainLooper).postDelayed({
@@ -74,8 +88,8 @@ class SplashActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }else{
-            Toast.makeText(this, "Loading data", Toast.LENGTH_SHORT).show()
-            recreate()
+            getLastLocation()
+            requestLocationUpdates()
         }
     }
 
@@ -102,14 +116,11 @@ class SplashActivity : AppCompatActivity() {
                         val longitude = location.longitude
                         Log.d(TAG, "Last known location: $latitude, $longitude")
 //                        initData(latitude.toString(), longitude.toString())
-                        // Do something with the latitude and longitude
                     } else {
                         Log.d(TAG, "Last known location is null")
-                        // Handle the case where the last known location is not available
                     }
                 }
                 .addOnFailureListener { exception ->
-                    // Handle the exception
                     Log.e(TAG, "Error getting last location: ${exception.message}")
                 }
         } else {
@@ -133,20 +144,61 @@ class SplashActivity : AppCompatActivity() {
         val task = settingsClient.checkLocationSettings(locationSettingsRequest)
 
         task.addOnSuccessListener {
-            // All location settings are satisfied. Start receiving updates
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
+            navigateToMain()
         }
 
         task.addOnFailureListener { exception ->
             if (exception is ResolvableApiException) {
-                // Location settings are not satisfied, but this can be fixed
-                // Show a dialog to the user to enable location settings
                 try {
-                    exception.startResolutionForResult(this, REQUEST_CHECK_SETTINGS)
+//                    exception.startResolutionForResult(this, REQUEST_CHECK_SETTINGS)
+//                    showPermissionDeniedDialog()
+                    return@addOnFailureListener
                 } catch (sendEx: IntentSender.SendIntentException) {
-                    // Ignore the error
+                    Log.d(TAG, "requestLocationUpdates: ${sendEx.message}")
                 }
             }
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                requestLocationUpdates()
+                getLastLocation()
+            } else {
+                showPermissionDeniedDialog()
+                return
+            }
+        }
+    }
+
+    private fun showPermissionDeniedDialog() {
+        showAlertDialogue(this, "Permission Denied", 
+            "Location permission is required for this app. Please enable it in the app settings.",
+            onRetry = { openAppSettings() }){
+            finish()
+        }
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri = Uri.fromParts("package", packageName, null)
+        intent.data = uri
+        startActivity(intent)
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        if (!checkLocationPermission()){
+            showPermissionDeniedDialog()
+            return
+        }
+        else navigateToMain()
     }
 }
